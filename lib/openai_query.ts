@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { getItem } from './utils'
+import { getItem } from '@/lib/utils'
 
 async function getKey(): Promise<string> {
   const key = await getItem('local:OPENAI_API_KEY')

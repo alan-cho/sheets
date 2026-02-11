@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { getItem } from './utils'
+import { getItem } from '@/lib/utils'
 
 async function getKey() {
   const key = await getItem('local:ANTHROPIC_API_KEY')
