@@ -15,7 +15,6 @@ export default defineConfig({
         '724665450633-ub0l7ul2h8fd02a3kpnfh2p28i9lc7oq.apps.googleusercontent.com',
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     },
-    key: 'MUIwI792OE',
   },
   vite: () => ({
     plugins: [tailwindcss()],
