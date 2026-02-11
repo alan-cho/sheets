@@ -1,12 +1,12 @@
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+
+// TODO: add hook to send query
 const ChatBox = () => {
   return (
     <div>
-      <input
-        placeholder="Ask me a question"
-        type="text"
-        id="chatbox"
-        name="chatbox"
-      />
+      <Textarea placeholder="Ask me a question" />
+      <Button variant="outline">Submit</Button>
     </div>
   )
 }
