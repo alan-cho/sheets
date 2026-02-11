@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { storage } from '@wxt-dev/storage'
+import { getItem } from './utils'
 
 async function getKey() {
-  const key = await storage.getItem<string>('local:ANTHROPIC_API_KEY')
+  const key = await getItem('local:ANTHROPIC_API_KEY')
   if (!key) throw new Error('failed to get ANTHROPIC_API_KEY')
   return key
 }

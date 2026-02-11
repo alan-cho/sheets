@@ -1,8 +1,8 @@
 import OpenAI from 'openai'
-import { storage } from '@wxt-dev/storage'
+import { getItem } from './utils'
 
 async function getKey(): Promise<string> {
-  const key = await storage.getItem<string>('local: OPENAI_API_KEY')
+  const key = await getItem('local:OPENAI_API_KEY')
   if (!key) throw new Error('failed to get OPENAI_API_KEY')
   return key
 }

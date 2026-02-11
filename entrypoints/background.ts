@@ -26,3 +26,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 })
+
+export default defineBackground(() => {
+  console.log('background service loaded')
+})
