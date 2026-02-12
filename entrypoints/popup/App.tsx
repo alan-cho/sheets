@@ -1,5 +1,5 @@
-import Header from './components/Header'
-import ChatBox from './components/ChatBox'
+import Header from '@/entrypoints/popup/components/Header'
+import ChatBox from '@/entrypoints/popup/components/ChatBox'
 
 export default function App() {
   return (

@@ -83,7 +83,9 @@ export default function App() {
         <div className="flex items-center gap-2">
           <Button onClick={connectGoogle}>Connect Google</Button>
           {googleStatus && (
-            <span className="text-sm text-muted-foreground">{googleStatus}</span>
+            <span className="text-sm text-muted-foreground">
+              {googleStatus}
+            </span>
           )}
         </div>
         <div className="flex flex-col gap-2">
