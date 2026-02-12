@@ -1,9 +1,9 @@
 import type {
-  SheetInfo,
-  TableInfo,
-  SpreadsheetMetadata,
   GridRange,
+  SheetInfo,
   SheetsApiResponse,
+  SpreadsheetMetadata,
+  TableInfo,
 } from '@/lib/types'
 
 function columnIndexToLetter(index: number): string {

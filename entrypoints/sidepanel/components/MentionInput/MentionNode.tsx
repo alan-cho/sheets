@@ -1,11 +1,12 @@
-import {
-  DecoratorNode,
-  type DOMConversionMap,
-  type DOMExportOutput,
-  type LexicalNode,
-  type NodeKey,
-  type SerializedLexicalNode,
-  type Spread,
+import { DecoratorNode } from 'lexical'
+
+import type {
+  DOMConversionMap,
+  DOMExportOutput,
+  LexicalNode,
+  NodeKey,
+  SerializedLexicalNode,
+  Spread,
 } from 'lexical'
 import type { ContextType } from '@/lib/types'
 
@@ -93,11 +94,7 @@ export class MentionNode extends DecoratorNode<JSX.Element> {
   }
 
   decorate(): JSX.Element {
-    return (
-      <span contentEditable={false}>
-        @{this.__mentionName}
-      </span>
-    )
+    return <span contentEditable={false}>@{this.__mentionName}</span>
   }
 }
 

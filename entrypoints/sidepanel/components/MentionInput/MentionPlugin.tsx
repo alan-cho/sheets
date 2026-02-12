@@ -1,18 +1,23 @@
-import { useEffect, useLayoutEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
-  $getSelection,
-  $isRangeSelection,
-  $isNodeSelection,
-  $isTextNode,
   $createTextNode,
-  KEY_TAB_COMMAND,
-  KEY_ESCAPE_COMMAND,
+  $getSelection,
+  $isNodeSelection,
+  $isRangeSelection,
+  $isTextNode,
+  COMMAND_PRIORITY_HIGH,
   KEY_BACKSPACE_COMMAND,
   KEY_DELETE_COMMAND,
-  COMMAND_PRIORITY_HIGH,
+  KEY_ESCAPE_COMMAND,
+  KEY_TAB_COMMAND,
 } from 'lexical'
-import { $createMentionNode, $isMentionNode } from './MentionNode'
+
+import {
+  $createMentionNode,
+  $isMentionNode,
+} from '@/entrypoints/sidepanel/components/MentionInput/MentionNode'
+
 import type { ContextType } from '@/lib/types'
 
 interface AvailableContext {
@@ -42,7 +47,10 @@ export function MentionPlugin({ availableContexts }: MentionPluginProps) {
       if (!query) return null
       const lower = query.toLowerCase()
       for (const ctx of availableContexts) {
-        if (ctx.label.toLowerCase().startsWith(lower) && ctx.label.toLowerCase() !== lower) {
+        if (
+          ctx.label.toLowerCase().startsWith(lower) &&
+          ctx.label.toLowerCase() !== lower
+        ) {
           return {
             query,
             completion: ctx.label.slice(query.length),
@@ -60,7 +68,10 @@ export function MentionPlugin({ availableContexts }: MentionPluginProps) {
     (query: string): AvailableContext | null => {
       if (!query) return null
       const lower = query.toLowerCase()
-      return availableContexts.find((ctx) => ctx.label.toLowerCase() === lower) ?? null
+      return (
+        availableContexts.find((ctx) => ctx.label.toLowerCase() === lower) ??
+        null
+      )
     },
     [availableContexts],
   )
@@ -80,8 +91,9 @@ export function MentionPlugin({ availableContexts }: MentionPluginProps) {
 
     const range = domSelection.getRangeAt(0)
     const rect = range.getBoundingClientRect()
-    const rootRect = rootElement.closest('[data-mention-input]')?.getBoundingClientRect()
-      ?? rootElement.parentElement?.getBoundingClientRect()
+    const rootRect =
+      rootElement.closest('[data-mention-input]')?.getBoundingClientRect() ??
+      rootElement.parentElement?.getBoundingClientRect()
 
     if (!rootRect || (rect.width === 0 && rect.height === 0)) {
       ghostEl.style.display = 'none'
@@ -304,7 +316,8 @@ export function MentionPlugin({ availableContexts }: MentionPluginProps) {
         }
       }
 
-      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+      if (!$isRangeSelection(selection) || !selection.isCollapsed())
+        return false
 
       const anchor = selection.anchor
       if (anchor.type !== 'text') return false

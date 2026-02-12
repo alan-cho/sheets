@@ -1,19 +1,21 @@
 import { useEffect } from 'react'
+import { ClearEditorPlugin } from '@lexical/react/LexicalClearEditorPlugin'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
-import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
+import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin'
 import {
-  KEY_ENTER_COMMAND,
-  COMMAND_PRIORITY_HIGH,
-  CLEAR_EDITOR_COMMAND,
   $getRoot,
+  CLEAR_EDITOR_COMMAND,
+  COMMAND_PRIORITY_HIGH,
+  KEY_ENTER_COMMAND,
 } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { ClearEditorPlugin } from '@lexical/react/LexicalClearEditorPlugin'
-import { MentionNode } from './MentionNode'
-import { MentionPlugin } from './MentionPlugin'
-import { mentionInputTheme } from './theme'
+
+import { MentionNode } from '@/entrypoints/sidepanel/components/MentionInput/MentionNode'
+import { MentionPlugin } from '@/entrypoints/sidepanel/components/MentionInput/MentionPlugin'
+import { mentionInputTheme } from '@/entrypoints/sidepanel/components/MentionInput/theme'
+
 import type { ContextType } from '@/lib/types'
 
 interface AvailableContext {
@@ -90,15 +92,13 @@ export function MentionInput({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div
-        className="border-input focus-within:border-ring focus-within:ring-ring/50 relative flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] focus-within:ring-[3px] [&[data-disabled=true]]:cursor-not-allowed [&[data-disabled=true]]:opacity-50"
+        className="border-input focus-within:border-ring focus-within:ring-ring/50 relative flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] focus-within:ring-[3px] data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50"
         data-mention-input
         data-disabled={disabled}
       >
         <PlainTextPlugin
           contentEditable={
-            <ContentEditable
-              className="min-h-5 w-full outline-none [&_.mention-input-paragraph]:m-0"
-            />
+            <ContentEditable className="min-h-5 w-full outline-none [&_.mention-input-paragraph]:m-0" />
           }
           placeholder={
             <div className="text-muted-foreground pointer-events-none absolute left-3 top-2 text-sm">

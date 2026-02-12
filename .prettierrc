@@ -1,4 +1,17 @@
 {
   "semi": false,
-  "singleQuote": true
+  "singleQuote": true,
+  "plugins": ["@ianvs/prettier-plugin-sort-imports"],
+  "importOrder": [
+    "<BUILTIN_MODULES>",
+    "",
+    "^(react|react-dom)(.*)$",
+    "<THIRD_PARTY_MODULES>",
+    "",
+    "^@/(.*)$",
+    "",
+    "<TYPES>",
+    "<TYPES>^@/(.*)$"
+  ],
+  "importOrderTypeScriptVersion": "5.0.0"
 }

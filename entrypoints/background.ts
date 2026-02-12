@@ -1,7 +1,7 @@
-import { openAIQuery, anthropicQuery } from '@/lib/query'
 import { getGoogleAuthToken } from '@/lib/google/getAuth'
-import { getRangeValues } from '@/lib/google/getSpreadsheet'
 import { getSpreadsheetMetadata } from '@/lib/google/getMetadata'
+import { getRangeValues } from '@/lib/google/getSpreadsheet'
+import { anthropicQuery, openAIQuery } from '@/lib/query'
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {

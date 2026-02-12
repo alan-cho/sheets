@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
+import { MentionInput } from '@/entrypoints/sidepanel/components/MentionInput'
 import { parser } from '@/lib/parser'
 import { sendMessage } from '@/lib/utils'
-import { MentionInput } from './components/MentionInput'
 
 import type {
-  SpreadsheetMetadata,
-  ContextType,
   ContextEntity,
+  ContextType,
   ResolvedContext,
+  SpreadsheetMetadata,
 } from '@/lib/types'
 
 export default function App() {
@@ -133,7 +134,9 @@ export default function App() {
           }
         />
         <Button
-          onClick={() => {/* Submit is handled by Enter in MentionInput */}}
+          onClick={() => {
+            /* Submit is handled by Enter in MentionInput */
+          }}
           disabled={!metadata || loading}
           size="sm"
           className="w-full"

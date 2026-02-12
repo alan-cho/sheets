@@ -1,7 +1,10 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
 import { storage } from '@wxt-dev/storage'
+import { clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
 import { MessageResponse } from '@/lib/types'
+
+import type { ClassValue } from 'clsx'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

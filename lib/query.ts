@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
+
 import { getKey } from '@/lib/utils'
 
 export async function anthropicQuery(input: string) {

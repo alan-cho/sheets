@@ -11,6 +11,17 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["./*", "../*"],
+              message: "Use @/ path alias instead of relative imports.",
+            },
+          ],
+        },
+      ],
     },
   },
   {
