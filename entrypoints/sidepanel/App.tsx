@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LoaderCircle, RefreshCw, Send, TableProperties } from 'lucide-react'
+import { Bug, LoaderCircle, RefreshCw, Send, TableProperties } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { MentionInput } from '@/entrypoints/sidepanel/components/MentionInput'
+import { serializeContext } from '@/lib/context-serializer'
 import { parser } from '@/lib/parser'
-import { sendMessage } from '@/lib/utils'
+import { getItem, saveItem, sendMessage } from '@/lib/utils'
 
 import type { MentionInputHandle } from '@/entrypoints/sidepanel/components/MentionInput'
 import type {
   ContextEntity,
   ContextType,
+  LLMProvider,
   ResolvedContext,
   SpreadsheetMetadata,
 } from '@/lib/types'
@@ -26,15 +28,30 @@ export default function App() {
   const [metadata, setMetadata] = useState<SpreadsheetMetadata | null>(null)
   const [response, setResponse] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [provider, setProvider] = useState<LLMProvider>('anthropic')
+  const [dryRun, setDryRun] = useState(true)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    getItem('local:LLM_PROVIDER')
+      .then((saved) => {
+        if (saved === 'anthropic' || saved === 'openai') setProvider(saved)
+      })
+      .catch(() => {})
+  }, [])
+
+  const reconnect = useCallback(() => {
+    setError(null)
+    setSpreadsheetId(null)
+    setMetadata(null)
     sendMessage<string>({ type: 'GET_ACTIVE_SPREADSHEET' })
       .then(setSpreadsheetId)
       .catch((err) => setError(err.message))
   }, [])
+
+  useEffect(reconnect, [])
 
   const fetchMetadata = useCallback(
     async (id: string) => {
@@ -77,6 +94,12 @@ export default function App() {
       ]
     : []
 
+  const toggleProvider = () => {
+    const next: LLMProvider = provider === 'anthropic' ? 'openai' : 'anthropic'
+    setProvider(next)
+    saveItem('LLM_PROVIDER', next)
+  }
+
   const handleSubmit = async (plainText: string) => {
     if (!metadata || !spreadsheetId) return
 
@@ -97,8 +120,21 @@ export default function App() {
           return { ...c, data }
         }),
       )
-      // TODO: query with `resolved` as rich context + `metadata` as baseline context
-      setResponse(JSON.stringify(resolved))
+
+      const xml = serializeContext(resolved, metadata)
+
+      if (dryRun) {
+        setResponse(`--- DRY RUN (${provider}) ---\n\n` +
+          `== Question ==\n${plainText}\n\n` +
+          `== Context XML ==\n${xml}`)
+      } else {
+        const result = await sendMessage<string>({
+          type: provider === 'anthropic' ? 'QUERY_ANTHROPIC' : 'QUERY_OPENAI',
+          question: plainText,
+          context: xml,
+        })
+        setResponse(result)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
     } finally {
@@ -189,6 +225,20 @@ export default function App() {
           </pre>
         )}
 
+        {!response && !isConnected && !isLoadingMetadata && (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <p className="text-sm text-muted-foreground">
+              Not connected to a spreadsheet
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              Navigate to a Google Sheet, then reconnect
+            </p>
+            <Button size="lg" className="mt-4" onClick={reconnect}>
+              Reconnect
+            </Button>
+          </div>
+        )}
+
         {!response && !error && isConnected && (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <p className="text-sm text-muted-foreground">
@@ -217,6 +267,20 @@ export default function App() {
               }
             />
           </div>
+          <button
+            onClick={() => setDryRun(!dryRun)}
+            className={`shrink-0 rounded-md border px-1.5 py-1.5 transition-colors ${dryRun ? 'border-amber-400/50 bg-amber-500/10 text-amber-600' : 'border-border text-muted-foreground hover:bg-secondary'}`}
+            title={dryRun ? 'Dry run ON — click to send to API' : 'Dry run OFF — click to preview payload'}
+          >
+            <Bug className="size-3.5" />
+          </button>
+          <button
+            onClick={toggleProvider}
+            className="shrink-0 rounded-md border border-border px-2 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary"
+            title={`Using ${provider === 'anthropic' ? 'Claude' : 'GPT'} — click to switch`}
+          >
+            {provider === 'anthropic' ? 'Claude' : 'GPT'}
+          </button>
           <Button
             onClick={() => mentionInputRef.current?.submit()}
             disabled={!metadata || loading}

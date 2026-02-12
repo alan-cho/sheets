@@ -40,6 +40,13 @@ export interface ResolvedContext extends ContextEntity {
   data: string[][]
 }
 
+export type LLMProvider = 'anthropic' | 'openai'
+
+export interface QueryInput {
+  question: string
+  context: string
+}
+
 export interface MessageResponse<T = unknown> {
   success: boolean
   data?: T

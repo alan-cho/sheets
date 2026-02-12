@@ -76,7 +76,10 @@ export async function getSpreadsheetMetadata(
   const tables: TableInfo[] = data.sheets.flatMap((s) =>
     (s.tables ?? []).map((t) => ({
       name: t.name,
-      range: gridRangeToA1(t.range, sheets),
+      range: gridRangeToA1(
+        { ...t.range, sheetId: t.range.sheetId ?? s.properties.sheetId },
+        sheets,
+      ),
       columns: t.columnProperties.map((c) => ({
         columnIndex: c.columnIndex,
         columnName: c.columnName,
