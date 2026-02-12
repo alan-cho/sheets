@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { LoaderCircle, RefreshCw, Send, TableProperties } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { MentionInput } from '@/entrypoints/sidepanel/components/MentionInput'
 import { parser } from '@/lib/parser'
 import { sendMessage } from '@/lib/utils'
 
+import type { MentionInputHandle } from '@/entrypoints/sidepanel/components/MentionInput'
 import type {
   ContextEntity,
   ContextType,
@@ -12,11 +14,19 @@ import type {
   SpreadsheetMetadata,
 } from '@/lib/types'
 
+const contextTypeLabel: Record<ContextType, string> = {
+  sheet: 'Sheet',
+  namedRange: 'Range',
+  table: 'Table',
+}
+
 export default function App() {
+  const mentionInputRef = useRef<MentionInputHandle>(null)
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null)
   const [metadata, setMetadata] = useState<SpreadsheetMetadata | null>(null)
+  const [response, setResponse] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const [results, setResults] = useState<ResolvedContext[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,15 +36,29 @@ export default function App() {
       .catch((err) => setError(err.message))
   }, [])
 
+  const fetchMetadata = useCallback(
+    async (id: string) => {
+      setRefreshing(true)
+      setError(null)
+      try {
+        const data = await sendMessage<SpreadsheetMetadata>({
+          type: 'GET_SHEET_METADATA',
+          spreadsheetId: id,
+        })
+        setMetadata(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load metadata')
+      } finally {
+        setRefreshing(false)
+      }
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!spreadsheetId) return
-    sendMessage<SpreadsheetMetadata>({
-      type: 'GET_SHEET_METADATA',
-      spreadsheetId,
-    })
-      .then(setMetadata)
-      .catch((err) => setError(err.message))
-  }, [spreadsheetId])
+    fetchMetadata(spreadsheetId)
+  }, [spreadsheetId, fetchMetadata])
 
   const availableContexts = metadata
     ? [
@@ -58,15 +82,9 @@ export default function App() {
 
     setLoading(true)
     setError(null)
-    setResults([])
+    setResponse(null)
 
     const contexts = parser(plainText, metadata)
-
-    if (contexts.length === 0) {
-      setError('No matching @references found')
-      setLoading(false)
-      return
-    }
 
     try {
       const resolved = await Promise.all(
@@ -79,7 +97,8 @@ export default function App() {
           return { ...c, data }
         }),
       )
-      setResults(resolved)
+      // TODO: query with `resolved` as rich context + `metadata` as baseline context
+      setResponse(JSON.stringify(resolved))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
     } finally {
@@ -87,62 +106,130 @@ export default function App() {
     }
   }
 
+  const isConnected = !!spreadsheetId && !!metadata
+  const isLoadingMetadata = !!spreadsheetId && !metadata && !error && !refreshing
+
   return (
-    <div className="flex h-screen flex-col p-3 gap-3">
+    <div className="flex h-screen flex-col">
       {/* Header */}
-      <div className="shrink-0">
-        <h1 className="text-sm font-semibold">{metadata?.title ?? 'Sheets'}</h1>
-        {!spreadsheetId && (
-          <p className="text-xs text-muted-foreground">Not on a Google Sheet</p>
-        )}
-        {spreadsheetId && !metadata && !error && (
-          <p className="text-xs text-muted-foreground">Loading metadata...</p>
-        )}
-      </div>
-
-      {/* Results */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {results.map((c) => (
-          <div key={c.name} className="mb-3">
-            <div className="mb-1 text-xs font-medium text-muted-foreground">
-              @{c.name}{' '}
-              <span className="text-muted-foreground/60">({c.type})</span>
+      <header className="shrink-0 border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-coral/10">
+              <TableProperties className="size-4 text-coral" />
             </div>
-            <pre className="overflow-auto rounded-md bg-muted p-2 text-xs">
-              {c.data.map((row) => row.join('\t')).join('\n')}
-            </pre>
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold leading-tight">
+                {metadata?.title ?? 'Sheets'}
+              </h1>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {isLoadingMetadata ? (
+                  <>
+                    <LoaderCircle className="size-3 animate-spin" />
+                    Loading...
+                  </>
+                ) : isConnected ? (
+                  <>
+                    <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                    Connected
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-block size-1.5 rounded-full bg-muted-foreground/50" />
+                    Not connected
+                  </>
+                )}
+              </p>
+            </div>
           </div>
-        ))}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => spreadsheetId && fetchMetadata(spreadsheetId)}
+            disabled={!spreadsheetId || refreshing}
+            title="Refresh metadata"
+          >
+            <RefreshCw
+              className={`size-3.5 text-muted-foreground ${refreshing ? 'animate-spin' : ''}`}
+            />
+          </Button>
+        </div>
+      </header>
 
+      {/* Context chips */}
+      {availableContexts.length > 0 && (
+        <div className="shrink-0 border-b border-border px-4 py-2.5">
+          <div className="flex flex-wrap gap-1.5">
+            {availableContexts.map((ctx) => (
+              <span
+                key={`${ctx.type}-${ctx.label}`}
+                className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground"
+              >
+                <span className="text-muted-foreground">
+                  {contextTypeLabel[ctx.type]}
+                </span>
+                {ctx.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Response area */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {error && (
-          <p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
             {error}
-          </p>
+          </div>
+        )}
+
+        {response && (
+          <pre className="whitespace-pre-wrap text-sm leading-relaxed">
+            {response}
+          </pre>
+        )}
+
+        {!response && !error && isConnected && (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <p className="text-sm text-muted-foreground">
+              Ask a question about your spreadsheet
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              Use <kbd className="rounded border border-border bg-secondary px-1 py-0.5 text-[10px] font-mono">@</kbd> to reference sheets, tables, or named ranges
+            </p>
+          </div>
         )}
       </div>
 
-      {/* Input */}
-      <div className="shrink-0 flex flex-col gap-2">
-        <MentionInput
-          availableContexts={availableContexts}
-          onSubmit={handleSubmit}
-          disabled={!metadata || loading}
-          placeholder={
-            metadata
-              ? 'Type @SheetName, @TableName, or @NamedRange...'
-              : 'Open a Google Sheet to start'
-          }
-        />
-        <Button
-          onClick={() => {
-            /* Submit is handled by Enter in MentionInput */
-          }}
-          disabled={!metadata || loading}
-          size="sm"
-          className="w-full"
-        >
-          {loading ? 'Fetching...' : 'Submit'}
-        </Button>
+      {/* Input area */}
+      <div className="shrink-0 border-t border-border px-4 py-3">
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <MentionInput
+              ref={mentionInputRef}
+              availableContexts={availableContexts}
+              onSubmit={handleSubmit}
+              disabled={!metadata || loading}
+              placeholder={
+                metadata
+                  ? 'Ask about your spreadsheet...'
+                  : 'Open a Google Sheet to start'
+              }
+            />
+          </div>
+          <Button
+            onClick={() => mentionInputRef.current?.submit()}
+            disabled={!metadata || loading}
+            size="icon-sm"
+            className="shrink-0 rounded-lg"
+          >
+            {loading ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )

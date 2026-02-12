@@ -144,30 +144,31 @@ export function MentionPlugin({ availableContexts }: MentionPluginProps) {
         const offset = anchor.offset
         const textBeforeCursor = text.slice(0, offset)
 
-        // Check for exact match followed by space: `@Sheet2 `
-        const exactMatch = textBeforeCursor.match(/@(\w+)\s$/)
-        if (exactMatch) {
-          const match = findExactMatch(exactMatch[1])
-          if (match) {
-            const nodeKey = node.getKey()
-            const matchStart = offset - exactMatch[0].length
-            ghostRef.current = null
-            updateGhostDOM()
-            // Schedule conversion outside of read
-            convertMention(nodeKey, matchStart, offset, match.label, match.type)
-            return
-          }
-        }
-
-        // Otherwise check for partial match for ghost text
-        const atMatch = textBeforeCursor.match(/@(\w*)$/)
-        if (!atMatch) {
+        // Find last @ before cursor
+        const atIdx = textBeforeCursor.lastIndexOf('@')
+        if (atIdx === -1) {
           ghostRef.current = null
           updateGhostDOM()
           return
         }
 
-        ghostRef.current = findMatch(atMatch[1])
+        const query = textBeforeCursor.slice(atIdx + 1)
+
+        // Auto-convert: exact match + trailing space, unambiguous
+        if (query.length > 0 && query.endsWith(' ')) {
+          const trimmed = query.slice(0, -1)
+          const exact = findExactMatch(trimmed)
+          if (exact && !findMatch(query)) {
+            const nodeKey = node.getKey()
+            ghostRef.current = null
+            updateGhostDOM()
+            convertMention(nodeKey, atIdx, offset, exact.label, exact.type)
+            return
+          }
+        }
+
+        // Show ghost if query is a prefix of any context
+        ghostRef.current = findMatch(query)
         updateGhostDOM()
       })
     })
@@ -247,11 +248,10 @@ export function MentionPlugin({ availableContexts }: MentionPluginProps) {
           const offset = anchor.offset
           const textBeforeCursor = text.slice(0, offset)
 
-          const atMatch = textBeforeCursor.match(/@(\w*)$/)
-          if (!atMatch) return
+          const atIdx = textBeforeCursor.lastIndexOf('@')
+          if (atIdx === -1) return
 
-          const atStart = offset - atMatch[0].length
-          const textBefore = text.slice(0, atStart)
+          const textBefore = text.slice(0, atIdx)
           const textAfter = text.slice(offset)
 
           const mentionNode = $createMentionNode(

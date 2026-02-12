@@ -8,6 +8,7 @@ import type {
   SerializedLexicalNode,
   Spread,
 } from 'lexical'
+import type { ReactNode } from 'react'
 import type { ContextType } from '@/lib/types'
 
 export type SerializedMentionNode = Spread<
@@ -15,13 +16,7 @@ export type SerializedMentionNode = Spread<
   SerializedLexicalNode
 >
 
-const TYPE_STYLES: Record<ContextType, string> = {
-  sheet: 'background:rgba(101,142,156,0.15);color:#658e9c;',
-  namedRange: 'background:rgba(227,101,91,0.15);color:#e3655b;',
-  table: 'background:#e9ebf8;color:#453f3c;',
-}
-
-export class MentionNode extends DecoratorNode<JSX.Element> {
+export class MentionNode extends DecoratorNode<ReactNode> {
   __mentionName: string
   __contextType: ContextType
 
@@ -41,12 +36,8 @@ export class MentionNode extends DecoratorNode<JSX.Element> {
 
   createDOM(): HTMLElement {
     const span = document.createElement('span')
-    span.style.cssText = TYPE_STYLES[this.__contextType]
-    span.style.borderRadius = '4px'
-    span.style.padding = '1px 6px'
-    span.style.fontWeight = '500'
-    span.style.fontSize = '0.875rem'
-    span.style.userSelect = 'none'
+    span.className =
+      'bg-coral/15 text-coral rounded-sm px-1.5 py-px font-medium text-sm select-none'
     return span
   }
 
@@ -93,7 +84,7 @@ export class MentionNode extends DecoratorNode<JSX.Element> {
     return true
   }
 
-  decorate(): JSX.Element {
+  decorate(): ReactNode {
     return <span contentEditable={false}>@{this.__mentionName}</span>
   }
 }

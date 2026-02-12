@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { ClearEditorPlugin } from '@lexical/react/LexicalClearEditorPlugin'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
@@ -23,6 +23,10 @@ interface AvailableContext {
   type: ContextType
 }
 
+export interface MentionInputHandle {
+  submit: () => void
+}
+
 interface MentionInputProps {
   availableContexts: AvailableContext[]
   onSubmit: (plainText: string) => void
@@ -33,11 +37,27 @@ interface MentionInputProps {
 function SubmitPlugin({
   onSubmit,
   disabled,
+  onRegister,
 }: {
   onSubmit: (text: string) => void
   disabled?: boolean
+  onRegister: (submit: () => void) => void
 }) {
   const [editor] = useLexicalComposerContext()
+
+  useEffect(() => {
+    const submit = () => {
+      editor.getEditorState().read(() => {
+        const text = $getRoot().getTextContent().trim()
+        if (!text) return
+
+        onSubmit(text)
+        editor.dispatchCommand(CLEAR_EDITOR_COMMAND, undefined)
+      })
+    }
+
+    onRegister(submit)
+  }, [editor, onSubmit, onRegister])
 
   useEffect(() => {
     return editor.registerCommand(
@@ -75,47 +95,64 @@ function DisabledPlugin({ disabled }: { disabled: boolean }) {
   return null
 }
 
-export function MentionInput({
-  availableContexts,
-  onSubmit,
-  disabled = false,
-  placeholder = 'Type @SheetName, @TableName, or @NamedRange...',
-}: MentionInputProps) {
-  const initialConfig = {
-    namespace: 'MentionInput',
-    theme: mentionInputTheme,
-    nodes: [MentionNode],
-    onError: (error: Error) => console.error(error),
-    editable: !disabled,
-  }
+export const MentionInput = forwardRef<MentionInputHandle, MentionInputProps>(
+  function MentionInput(
+    {
+      availableContexts,
+      onSubmit,
+      disabled = false,
+      placeholder = 'Type @SheetName, @TableName, or @NamedRange...',
+    },
+    ref,
+  ) {
+    const initialConfig = {
+      namespace: 'MentionInput',
+      theme: mentionInputTheme,
+      nodes: [MentionNode],
+      onError: (error: Error) => console.error(error),
+      editable: !disabled,
+    }
 
-  return (
-    <LexicalComposer initialConfig={initialConfig}>
-      <div
-        className="border-input focus-within:border-ring focus-within:ring-ring/50 relative flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] focus-within:ring-[3px] data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50"
-        data-mention-input
-        data-disabled={disabled}
-      >
-        <PlainTextPlugin
-          contentEditable={
-            <ContentEditable className="min-h-5 w-full outline-none [&_.mention-input-paragraph]:m-0" />
-          }
-          placeholder={
-            <div className="text-muted-foreground pointer-events-none absolute left-3 top-2 text-sm">
-              {placeholder}
-            </div>
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        <MentionPlugin availableContexts={availableContexts} />
-        <HistoryPlugin />
-        <ClearEditorPlugin />
-        <SubmitPlugin onSubmit={onSubmit} disabled={disabled} />
-        <DisabledPlugin disabled={disabled} />
-      </div>
-    </LexicalComposer>
-  )
-}
+    const submitRef = useRef(() => {})
+
+    useImperativeHandle(ref, () => ({
+      submit: () => submitRef.current(),
+    }))
+
+    return (
+      <LexicalComposer initialConfig={initialConfig}>
+        <div
+          className="border-input focus-within:border-ring focus-within:ring-ring/50 relative flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] focus-within:ring-[3px] data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50"
+          data-mention-input
+          data-disabled={disabled}
+        >
+          <PlainTextPlugin
+            contentEditable={
+              <ContentEditable className="min-h-5 w-full outline-none [&_.mention-input-paragraph]:m-0" />
+            }
+            placeholder={
+              <div className="text-muted-foreground pointer-events-none absolute left-3 top-2 text-sm">
+                {placeholder}
+              </div>
+            }
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+          <MentionPlugin availableContexts={availableContexts} />
+          <HistoryPlugin />
+          <ClearEditorPlugin />
+          <SubmitPlugin
+            onSubmit={onSubmit}
+            disabled={disabled}
+            onRegister={(fn) => {
+              submitRef.current = fn
+            }}
+          />
+          <DisabledPlugin disabled={disabled} />
+        </div>
+      </LexicalComposer>
+    )
+  },
+)
 
 function LexicalErrorBoundary({ children }: { children: React.ReactNode }) {
   return <>{children}</>
