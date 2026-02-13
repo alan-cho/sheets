@@ -8,8 +8,19 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { MentionInput } from '@/entrypoints/sidepanel/components/MentionInput'
 import { serializeContext } from '@/lib/context-serializer'
+import { DEFAULT_MODEL_ID, MODEL_OPTIONS, getModelOption } from '@/lib/models'
 import { parser } from '@/lib/parser'
 import { getItem, saveItem, sendMessage } from '@/lib/utils'
 
@@ -17,7 +28,6 @@ import type { MentionInputHandle } from '@/entrypoints/sidepanel/components/Ment
 import type {
   ContextEntity,
   ContextType,
-  LLMProvider,
   ResolvedContext,
   SpreadsheetMetadata,
 } from '@/lib/types'
@@ -34,17 +44,20 @@ export default function App() {
   const [metadata, setMetadata] = useState<SpreadsheetMetadata | null>(null)
   const [response, setResponse] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
-  const [provider, setProvider] = useState<LLMProvider>('anthropic')
-  const [dryRun, setDryRun] = useState(true)
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID)
+  const [debug, setDebug] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getItem('LLM_PROVIDER')
+    getItem('SELECTED_MODEL')
       .then((saved) => {
-        if (saved === 'anthropic' || saved === 'openai') setProvider(saved)
+        if (getModelOption(saved)) setSelectedModel(saved)
       })
+      .catch(() => {})
+    getItem('DEBUG_MODE')
+      .then((saved) => setDebug(saved === 'true'))
       .catch(() => {})
   }, [])
 
@@ -111,10 +124,9 @@ export default function App() {
       ]
     : []
 
-  const toggleProvider = () => {
-    const next: LLMProvider = provider === 'anthropic' ? 'openai' : 'anthropic'
-    setProvider(next)
-    saveItem('LLM_PROVIDER', next)
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId)
+    saveItem('SELECTED_MODEL', modelId)
   }
 
   const handleSubmit = async (plainText: string) => {
@@ -140,15 +152,17 @@ export default function App() {
 
       const xml = serializeContext(resolved, metadata)
 
-      if (dryRun) {
+      if (debug) {
+        const modelLabel = getModelOption(selectedModel)?.label ?? selectedModel
         setResponse(
-          `--- DRY RUN (${provider}) ---\n\n` +
+          `--- DRY RUN (${modelLabel}) ---\n\n` +
             `== Question ==\n${plainText}\n\n` +
             `== Context XML ==\n${xml}`,
         )
       } else {
         const result = await sendMessage<string>({
-          type: provider === 'anthropic' ? 'QUERY_ANTHROPIC' : 'QUERY_OPENAI',
+          type: 'QUERY_LLM',
+          model: selectedModel,
           question: plainText,
           context: xml,
         })
@@ -198,22 +212,30 @@ export default function App() {
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => spreadsheetId && fetchMetadata(spreadsheetId)}
-            disabled={!spreadsheetId || refreshing}
-            title="Refresh metadata"
-          >
+          <div className="flex items-center gap-1.5">
+            {debug && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+                <Bug className="size-3" />
+                Debug
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => spreadsheetId && fetchMetadata(spreadsheetId)}
+              disabled={!spreadsheetId || refreshing}
+              title="Refresh metadata"
+            >
             <RefreshCw
               className={`size-3.5 text-muted-foreground ${refreshing ? 'animate-spin' : ''}`}
             />
-          </Button>
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Context chips */}
-      {availableContexts.length > 0 && (
+      {debug && availableContexts.length > 0 && (
         <div className="shrink-0 border-b border-border px-4 py-2.5">
           <div className="flex flex-wrap gap-1.5">
             {availableContexts.map((ctx) => (
@@ -291,24 +313,34 @@ export default function App() {
               }
             />
           </div>
-          <button
-            onClick={() => setDryRun(!dryRun)}
-            className={`shrink-0 rounded-md border px-1.5 py-1.5 transition-colors ${dryRun ? 'border-amber-400/50 bg-amber-500/10 text-amber-600' : 'border-border text-muted-foreground hover:bg-secondary'}`}
-            title={
-              dryRun
-                ? 'Dry run ON — click to send to API'
-                : 'Dry run OFF — click to preview payload'
-            }
-          >
-            <Bug className="size-3.5" />
-          </button>
-          <button
-            onClick={toggleProvider}
-            className="shrink-0 rounded-md border border-border px-2 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary"
-            title={`Using ${provider === 'anthropic' ? 'Claude' : 'GPT'} — click to switch`}
-          >
-            {provider === 'anthropic' ? 'Claude' : 'GPT'}
-          </button>
+          <Select value={selectedModel} onValueChange={handleModelChange}>
+            <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-lg border-border px-2 text-[11px] font-medium text-muted-foreground">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="min-w-[180px]">
+              <SelectGroup>
+                <SelectLabel>Anthropic</SelectLabel>
+                {MODEL_OPTIONS.filter((m) => m.provider === 'anthropic').map(
+                  (m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectGroup>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel>OpenAI</SelectLabel>
+                {MODEL_OPTIONS.filter((m) => m.provider === 'openai').map(
+                  (m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           <Button
             onClick={() => mentionInputRef.current?.submit()}
             disabled={!metadata || loading}

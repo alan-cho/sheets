@@ -45,6 +45,7 @@ export type LLMProvider = 'anthropic' | 'openai'
 export interface QueryInput {
   question: string
   context: string
+  model: string
 }
 
 export interface MessageResponse<T = unknown> {
@@ -62,8 +63,7 @@ export interface GridRange {
 }
 
 export type BackgroundMessage =
-  | { type: 'QUERY_OPENAI'; question: string; context: string }
-  | { type: 'QUERY_ANTHROPIC'; question: string; context: string }
+  | { type: 'QUERY_LLM'; model: string; question: string; context: string }
   | { type: 'AUTHENTICATE_GOOGLE' }
   | { type: 'GET_RANGE_DATA'; spreadsheetId: string; range: string }
   | { type: 'GET_ACTIVE_SPREADSHEET' }

@@ -1,6 +1,7 @@
 import { getGoogleAuthToken } from '@/lib/google/getAuth'
 import { getSpreadsheetMetadata } from '@/lib/google/getMetadata'
 import { getRangeValues } from '@/lib/google/getSpreadsheet'
+import { getModelOption } from '@/lib/models'
 import { anthropicQuery, openAIQuery } from '@/lib/query'
 
 import type { BackgroundMessage, MessageResponse } from '@/lib/types'
@@ -27,24 +28,19 @@ function handleAsync<T>(
 browser.runtime.onMessage.addListener(
   (message: BackgroundMessage, _sender, sendResponse) => {
     switch (message.type) {
-      case 'QUERY_OPENAI': {
+      case 'QUERY_LLM': {
+        const model = getModelOption(message.model)
+        if (!model) {
+          sendResponse({ success: false, error: `Unknown model: ${message.model}` })
+          return true
+        }
+        const queryFn = model.provider === 'anthropic' ? anthropicQuery : openAIQuery
         handleAsync(
           () =>
-            openAIQuery({
+            queryFn({
               question: message.question,
               context: message.context,
-            }),
-          sendResponse,
-        )
-        return true
-      }
-
-      case 'QUERY_ANTHROPIC': {
-        handleAsync(
-          () =>
-            anthropicQuery({
-              question: message.question,
-              context: message.context,
+              model: message.model,
             }),
           sendResponse,
         )
