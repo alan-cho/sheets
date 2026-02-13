@@ -2,7 +2,7 @@ import { storage } from '@wxt-dev/storage'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-import { MessageResponse } from '@/lib/types'
+import type { BackgroundMessage, MessageResponse } from '@/lib/types'
 
 import type { ClassValue } from 'clsx'
 
@@ -16,30 +16,20 @@ export const saveItem = async (
 ): Promise<boolean> => {
   try {
     await storage.setItem<string>(`local:${key}`, value)
-  } catch (e) {
+  } catch {
     return false
   }
   return true
 }
 
-export const getItem = async (key: `local:${string}`): Promise<string> => {
-  try {
-    const item = await storage.getItem<string>(key)
-    if (item === null) throw new Error(`${key} not found`)
-    return item
-  } catch (e) {
-    throw new Error(`failed to get ${key}`)
-  }
-}
-
-export const getKey = async (key: `local:${string}`): Promise<string> => {
-  const apiKey = await getItem(key)
-  if (!apiKey) throw new Error(`failed to get ${key}`)
-  return apiKey
+export const getItem = async (key: string): Promise<string> => {
+  const item = await storage.getItem<string>(`local:${key}`)
+  if (item === null) throw new Error(`${key} not found`)
+  return item
 }
 
 export const sendMessage = async <T>(
-  message: Record<string, unknown>,
+  message: BackgroundMessage,
 ): Promise<T> => {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(message, (res: MessageResponse<T>) => {

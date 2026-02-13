@@ -1,3 +1,6 @@
+import { fetchSheetsApi } from '@/lib/google/fetch'
+import { columnIndexToLetter } from '@/lib/sheets-utils'
+
 import type {
   GridRange,
   SheetInfo,
@@ -5,16 +8,6 @@ import type {
   SpreadsheetMetadata,
   TableInfo,
 } from '@/lib/types'
-
-function columnIndexToLetter(index: number): string {
-  let letter = ''
-  let n = index
-  while (n >= 0) {
-    letter = String.fromCharCode((n % 26) + 65) + letter
-    n = Math.floor(n / 26) - 1
-  }
-  return letter
-}
 
 function gridRangeToA1(gridRange: GridRange, sheets: SheetInfo[]): string {
   const sheet = sheets.find((s) => s.sheetId === gridRange.sheetId)
@@ -52,15 +45,7 @@ export async function getSpreadsheetMetadata(
     'properties.title,sheets.properties(sheetId,title),sheets.tables(name,range,columnProperties(columnIndex,columnName,columnType)),namedRanges(name,range)'
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=${encodeURIComponent(fields)}`
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Sheets API error ${res.status}: ${body}`)
-  }
-
+  const res = await fetchSheetsApi(token, url)
   const data: SheetsApiResponse = await res.json()
 
   const sheets: SheetInfo[] = data.sheets.map((s) => ({
@@ -70,7 +55,10 @@ export async function getSpreadsheetMetadata(
 
   const namedRanges = (data.namedRanges ?? []).map((nr) => ({
     name: nr.name,
-    range: gridRangeToA1(nr.range, sheets),
+    range: gridRangeToA1(
+      { ...nr.range, sheetId: nr.range.sheetId ?? 0 },
+      sheets,
+    ),
   }))
 
   const tables: TableInfo[] = data.sheets.flatMap((s) =>

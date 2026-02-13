@@ -1,16 +1,8 @@
+import { columnIndexToLetter } from '@/lib/sheets-utils'
+
 import type { ResolvedContext, SpreadsheetMetadata } from '@/lib/types'
 
 const MAX_ROWS = 200
-
-function colIndexToLetter(index: number): string {
-  let letter = ''
-  let n = index
-  while (n >= 0) {
-    letter = String.fromCharCode((n % 26) + 65) + letter
-    n = Math.floor(n / 26) - 1
-  }
-  return letter
-}
 
 function escapeXml(str: string): string {
   return str
@@ -32,7 +24,7 @@ function serializeReference(ref: ResolvedContext): string {
   const schemaEntries = headers
     .map((header, i) => {
       if (!header) return null
-      return `      <column index="${colIndexToLetter(i)}" header="${escapeXml(header)}" />`
+      return `      <column index="${columnIndexToLetter(i)}" header="${escapeXml(header)}" />`
     })
     .filter(Boolean)
 
@@ -41,7 +33,7 @@ function serializeReference(ref: ResolvedContext): string {
       const cells = row
         .map((cell, colIdx) => {
           if (!cell) return null
-          return `        <cell col="${colIndexToLetter(colIdx)}">${escapeXml(cell)}</cell>`
+          return `        <cell col="${columnIndexToLetter(colIdx)}">${escapeXml(cell)}</cell>`
         })
         .filter(Boolean)
 

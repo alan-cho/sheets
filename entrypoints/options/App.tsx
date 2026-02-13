@@ -32,7 +32,7 @@ function ApiKeyField({ label, description, storageKey }: ApiKeyFieldProps) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    getItem(`local:${storageKey}`)
+    getItem(storageKey)
       .then((key) => {
         setSavedKey(key)
         setStatus('saved')

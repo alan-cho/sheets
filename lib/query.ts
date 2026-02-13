@@ -1,14 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 
-import { getKey } from '@/lib/utils'
+import { getItem } from '@/lib/utils'
 
 import type { QueryInput } from '@/lib/types'
 
 const SYSTEM_MESSAGE = `You are an AI assistant analyzing Google Sheets data. The user's spreadsheet data is provided below as XML context. Answer questions by referencing this data. Be concise.`
 
 export async function anthropicQuery({ question, context }: QueryInput) {
-  const apiKey = await getKey('local:ANTHROPIC_API_KEY')
+  const apiKey = await getItem('ANTHROPIC_API_KEY')
   const client = new Anthropic({ apiKey })
   const response = await client.messages.create({
     max_tokens: 1024,
@@ -21,7 +21,7 @@ export async function anthropicQuery({ question, context }: QueryInput) {
 }
 
 export async function openAIQuery({ question, context }: QueryInput) {
-  const apiKey = await getKey('local:OPENAI_API_KEY')
+  const apiKey = await getItem('OPENAI_API_KEY')
   const client = new OpenAI({ apiKey })
   const response = await client.responses.create({
     model: 'gpt-4.1',

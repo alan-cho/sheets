@@ -3,81 +3,130 @@ import { getSpreadsheetMetadata } from '@/lib/google/getMetadata'
 import { getRangeValues } from '@/lib/google/getSpreadsheet'
 import { anthropicQuery, openAIQuery } from '@/lib/query'
 
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  switch (message.type) {
-    case 'QUERY_OPENAI': {
-      openAIQuery({ question: message.question, context: message.context })
-        .then((response) => sendResponse({ success: true, data: response }))
-        .catch((error) =>
-          sendResponse({ success: false, error: error.message }),
-        )
-      return true
-    }
+import type { BackgroundMessage, MessageResponse } from '@/lib/types'
 
-    case 'QUERY_ANTHROPIC': {
-      anthropicQuery({ question: message.question, context: message.context })
-        .then((response) => sendResponse({ success: true, data: response }))
-        .catch((error) =>
-          sendResponse({ success: false, error: error.message }),
-        )
-      return true
-    }
+function extractSpreadsheetId(url?: string): string | null {
+  const match = url?.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/)
+  return match?.[1] ?? null
+}
 
-    case 'AUTHENTICATE_GOOGLE': {
-      getGoogleAuthToken(true)
-        .then((token) => sendResponse({ success: true, data: token }))
-        .catch((error) =>
-          sendResponse({ success: false, error: error.message }),
-        )
-      return true
-    }
+function handleAsync<T>(
+  fn: () => Promise<T>,
+  sendResponse: (response: MessageResponse<T>) => void,
+) {
+  fn()
+    .then((data) => sendResponse({ success: true, data }))
+    .catch((error: unknown) =>
+      sendResponse({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    )
+}
 
-    case 'GET_RANGE_DATA': {
-      getGoogleAuthToken(true)
-        .then((token) =>
-          getRangeValues(token, message.spreadsheetId, message.range),
+browser.runtime.onMessage.addListener(
+  (message: BackgroundMessage, _sender, sendResponse) => {
+    switch (message.type) {
+      case 'QUERY_OPENAI': {
+        handleAsync(
+          () =>
+            openAIQuery({
+              question: message.question,
+              context: message.context,
+            }),
+          sendResponse,
         )
-        .then((values) => sendResponse({ success: true, data: values }))
-        .catch((error) =>
-          sendResponse({ success: false, error: error.message }),
-        )
-      return true
-    }
+        return true
+      }
 
-    case 'GET_ACTIVE_SPREADSHEET': {
-      chrome.tabs
-        .query({ active: true, currentWindow: true })
-        .then((tabs) => {
-          const url = tabs[0]?.url
-          const match = url?.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/)
-          if (match) {
-            sendResponse({ success: true, data: match[1] })
-          } else {
-            sendResponse({ success: false, error: 'Not on a Google Sheet' })
-          }
-        })
-        .catch((error) =>
-          sendResponse({ success: false, error: error.message }),
+      case 'QUERY_ANTHROPIC': {
+        handleAsync(
+          () =>
+            anthropicQuery({
+              question: message.question,
+              context: message.context,
+            }),
+          sendResponse,
         )
-      return true
-    }
+        return true
+      }
 
-    case 'GET_SHEET_METADATA': {
-      getGoogleAuthToken(false)
-        .then((token) => getSpreadsheetMetadata(token, message.spreadsheetId))
-        .then((metadata) => sendResponse({ success: true, data: metadata }))
-        .catch((error) =>
-          sendResponse({ success: false, error: error.message }),
+      case 'AUTHENTICATE_GOOGLE': {
+        handleAsync(() => getGoogleAuthToken(true), sendResponse)
+        return true
+      }
+
+      case 'GET_RANGE_DATA': {
+        handleAsync(
+          () =>
+            getGoogleAuthToken(true).then((token) =>
+              getRangeValues(token, message.spreadsheetId, message.range),
+            ),
+          sendResponse,
         )
-      return true
-    }
+        return true
+      }
 
-    default: {
-      return
+      case 'GET_ACTIVE_SPREADSHEET': {
+        handleAsync(async () => {
+          const tabs = await chrome.tabs.query({
+            active: true,
+            currentWindow: true,
+          })
+          const id = extractSpreadsheetId(tabs[0]?.url)
+          if (!id) throw new Error('Not on a Google Sheet')
+          return id
+        }, sendResponse)
+        return true
+      }
+
+      case 'GET_SHEET_METADATA': {
+        handleAsync(
+          () =>
+            getGoogleAuthToken(false).then((token) =>
+              getSpreadsheetMetadata(token, message.spreadsheetId),
+            ),
+          sendResponse,
+        )
+        return true
+      }
+
+      default: {
+        return
+      }
     }
-  }
-})
+  },
+)
 
 export default defineBackground(() => {
   console.log('background service loaded')
+
+  let sidepanelPort: chrome.runtime.Port | null = null
+
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name !== 'sidepanel') return
+    sidepanelPort = port
+    port.onDisconnect.addListener(() => {
+      sidepanelPort = null
+    })
+  })
+
+  function notifySidepanel(spreadsheetId: string | null) {
+    sidepanelPort?.postMessage(
+      spreadsheetId
+        ? { type: 'SPREADSHEET_CHANGED', spreadsheetId }
+        : { type: 'SPREADSHEET_DISCONNECTED' },
+    )
+  }
+
+  chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+    const tab = await chrome.tabs.get(tabId)
+    notifySidepanel(extractSpreadsheetId(tab.url))
+  })
+
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (changeInfo.url && tab.active) {
+      notifySidepanel(extractSpreadsheetId(changeInfo.url))
+    }
+  })
 })

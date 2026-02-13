@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bug, LoaderCircle, RefreshCw, Send, TableProperties } from 'lucide-react'
+import {
+  Bug,
+  LoaderCircle,
+  RefreshCw,
+  Send,
+  TableProperties,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { MentionInput } from '@/entrypoints/sidepanel/components/MentionInput'
@@ -35,7 +41,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getItem('local:LLM_PROVIDER')
+    getItem('LLM_PROVIDER')
       .then((saved) => {
         if (saved === 'anthropic' || saved === 'openai') setProvider(saved)
       })
@@ -53,24 +59,35 @@ export default function App() {
 
   useEffect(reconnect, [])
 
-  const fetchMetadata = useCallback(
-    async (id: string) => {
-      setRefreshing(true)
-      setError(null)
-      try {
-        const data = await sendMessage<SpreadsheetMetadata>({
-          type: 'GET_SHEET_METADATA',
-          spreadsheetId: id,
-        })
-        setMetadata(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load metadata')
-      } finally {
-        setRefreshing(false)
+  useEffect(() => {
+    const port = chrome.runtime.connect({ name: 'sidepanel' })
+    port.onMessage.addListener((msg) => {
+      if (msg.type === 'SPREADSHEET_CHANGED') {
+        setError(null)
+        setSpreadsheetId(msg.spreadsheetId)
+      } else if (msg.type === 'SPREADSHEET_DISCONNECTED') {
+        setSpreadsheetId(null)
+        setMetadata(null)
       }
-    },
-    [],
-  )
+    })
+    return () => port.disconnect()
+  }, [])
+
+  const fetchMetadata = useCallback(async (id: string) => {
+    setRefreshing(true)
+    setError(null)
+    try {
+      const data = await sendMessage<SpreadsheetMetadata>({
+        type: 'GET_SHEET_METADATA',
+        spreadsheetId: id,
+      })
+      setMetadata(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load metadata')
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!spreadsheetId) return
@@ -124,9 +141,11 @@ export default function App() {
       const xml = serializeContext(resolved, metadata)
 
       if (dryRun) {
-        setResponse(`--- DRY RUN (${provider}) ---\n\n` +
-          `== Question ==\n${plainText}\n\n` +
-          `== Context XML ==\n${xml}`)
+        setResponse(
+          `--- DRY RUN (${provider}) ---\n\n` +
+            `== Question ==\n${plainText}\n\n` +
+            `== Context XML ==\n${xml}`,
+        )
       } else {
         const result = await sendMessage<string>({
           type: provider === 'anthropic' ? 'QUERY_ANTHROPIC' : 'QUERY_OPENAI',
@@ -143,7 +162,8 @@ export default function App() {
   }
 
   const isConnected = !!spreadsheetId && !!metadata
-  const isLoadingMetadata = !!spreadsheetId && !metadata && !error && !refreshing
+  const isLoadingMetadata =
+    !!spreadsheetId && !metadata && !error && !refreshing
 
   return (
     <div className="flex h-screen flex-col">
@@ -245,7 +265,11 @@ export default function App() {
               Ask a question about your spreadsheet
             </p>
             <p className="mt-1 text-xs text-muted-foreground/60">
-              Use <kbd className="rounded border border-border bg-secondary px-1 py-0.5 text-[10px] font-mono">@</kbd> to reference sheets, tables, or named ranges
+              Use{' '}
+              <kbd className="rounded border border-border bg-secondary px-1 py-0.5 text-[10px] font-mono">
+                @
+              </kbd>{' '}
+              to reference sheets, tables, or named ranges
             </p>
           </div>
         )}
@@ -270,7 +294,11 @@ export default function App() {
           <button
             onClick={() => setDryRun(!dryRun)}
             className={`shrink-0 rounded-md border px-1.5 py-1.5 transition-colors ${dryRun ? 'border-amber-400/50 bg-amber-500/10 text-amber-600' : 'border-border text-muted-foreground hover:bg-secondary'}`}
-            title={dryRun ? 'Dry run ON — click to send to API' : 'Dry run OFF — click to preview payload'}
+            title={
+              dryRun
+                ? 'Dry run ON — click to send to API'
+                : 'Dry run OFF — click to preview payload'
+            }
           >
             <Bug className="size-3.5" />
           </button>

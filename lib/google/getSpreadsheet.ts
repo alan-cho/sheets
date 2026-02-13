@@ -1,3 +1,5 @@
+import { fetchSheetsApi } from '@/lib/google/fetch'
+
 export async function getRangeValues(
   token: string,
   spreadsheetId: string,
@@ -5,15 +7,7 @@ export async function getRangeValues(
 ): Promise<string[][]> {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}`
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Sheets API error ${res.status}: ${body}`)
-  }
-
+  const res = await fetchSheetsApi(token, url)
   const data = await res.json()
   return data.values ?? []
 }

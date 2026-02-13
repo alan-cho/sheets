@@ -54,12 +54,20 @@ export interface MessageResponse<T = unknown> {
 }
 
 export interface GridRange {
-  sheetId: number
+  sheetId?: number
   startRowIndex?: number
   endRowIndex?: number
   startColumnIndex?: number
   endColumnIndex?: number
 }
+
+export type BackgroundMessage =
+  | { type: 'QUERY_OPENAI'; question: string; context: string }
+  | { type: 'QUERY_ANTHROPIC'; question: string; context: string }
+  | { type: 'AUTHENTICATE_GOOGLE' }
+  | { type: 'GET_RANGE_DATA'; spreadsheetId: string; range: string }
+  | { type: 'GET_ACTIVE_SPREADSHEET' }
+  | { type: 'GET_SHEET_METADATA'; spreadsheetId: string }
 
 export interface SheetsApiResponse {
   properties: { title: string }
