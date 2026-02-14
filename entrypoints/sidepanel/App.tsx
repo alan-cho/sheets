@@ -1,26 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  Bug,
-  LoaderCircle,
-  RefreshCw,
-  Send,
-  TableProperties,
-} from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { MentionInput } from '@/entrypoints/sidepanel/components/MentionInput'
+import { ChatInput } from '@/entrypoints/sidepanel/components/ChatInput'
+import { ContextChips } from '@/entrypoints/sidepanel/components/ContextChips'
+import { ResponseArea } from '@/entrypoints/sidepanel/components/ResponseArea'
+import { StatusHeader } from '@/entrypoints/sidepanel/components/StatusHeader'
 import { serializeContext } from '@/lib/context-serializer'
-import { DEFAULT_MODEL_ID, MODEL_OPTIONS, getModelOption } from '@/lib/models'
+import { DEFAULT_MODEL_ID, getModelOption } from '@/lib/models'
 import { parser } from '@/lib/parser'
 import { getItem, saveItem, sendMessage } from '@/lib/utils'
 
@@ -31,12 +16,6 @@ import type {
   ResolvedContext,
   SpreadsheetMetadata,
 } from '@/lib/types'
-
-const contextTypeLabel: Record<ContextType, string> = {
-  sheet: 'Sheet',
-  namedRange: 'Range',
-  table: 'Table',
-}
 
 export default function App() {
   const mentionInputRef = useRef<MentionInputHandle>(null)
@@ -181,180 +160,42 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col">
-      {/* Header */}
-      <header className="shrink-0 border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-coral/10">
-              <TableProperties className="size-4 text-coral" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-sm font-semibold leading-tight">
-                {metadata?.title ?? 'Sheets'}
-              </h1>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                {isLoadingMetadata ? (
-                  <>
-                    <LoaderCircle className="size-3 animate-spin" />
-                    Loading...
-                  </>
-                ) : isConnected ? (
-                  <>
-                    <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                    Connected
-                  </>
-                ) : (
-                  <>
-                    <span className="inline-block size-1.5 rounded-full bg-muted-foreground/50" />
-                    Not connected
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {debug && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
-                <Bug className="size-3" />
-                Debug
-              </span>
-            )}
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => spreadsheetId && fetchMetadata(spreadsheetId)}
-              disabled={!spreadsheetId || refreshing}
-              title="Refresh metadata"
-            >
-            <RefreshCw
-              className={`size-3.5 text-muted-foreground ${refreshing ? 'animate-spin' : ''}`}
-            />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <StatusHeader
+        title={metadata?.title}
+        isLoadingMetadata={isLoadingMetadata}
+        isConnected={isConnected}
+        debug={debug}
+        refreshing={refreshing}
+        onRefresh={() => spreadsheetId && fetchMetadata(spreadsheetId)}
+        canRefresh={!!spreadsheetId}
+      />
 
-      {/* Context chips */}
       {debug && availableContexts.length > 0 && (
-        <div className="shrink-0 border-b border-border px-4 py-2.5">
-          <div className="flex flex-wrap gap-1.5">
-            {availableContexts.map((ctx) => (
-              <span
-                key={`${ctx.type}-${ctx.label}`}
-                className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground"
-              >
-                <span className="text-muted-foreground">
-                  {contextTypeLabel[ctx.type]}
-                </span>
-                {ctx.label}
-              </span>
-            ))}
-          </div>
-        </div>
+        <ContextChips contexts={availableContexts} />
       )}
 
-      {/* Response area */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {error && (
-          <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
-            {error}
-          </div>
-        )}
+      <ResponseArea
+        error={error}
+        response={response}
+        isConnected={isConnected}
+        isLoadingMetadata={isLoadingMetadata}
+        onReconnect={reconnect}
+      />
 
-        {response && (
-          <pre className="whitespace-pre-wrap text-sm leading-relaxed">
-            {response}
-          </pre>
-        )}
-
-        {!response && !isConnected && !isLoadingMetadata && (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="text-sm text-muted-foreground">
-              Not connected to a spreadsheet
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/60">
-              Navigate to a Google Sheet, then reconnect
-            </p>
-            <Button size="lg" className="mt-4" onClick={reconnect}>
-              Reconnect
-            </Button>
-          </div>
-        )}
-
-        {!response && !error && isConnected && (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="text-sm text-muted-foreground">
-              Ask a question about your spreadsheet
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/60">
-              Use{' '}
-              <kbd className="rounded border border-border bg-secondary px-1 py-0.5 text-[10px] font-mono">
-                @
-              </kbd>{' '}
-              to reference sheets, tables, or named ranges
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Input area */}
-      <div className="shrink-0 border-t border-border px-4 py-3">
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <MentionInput
-              ref={mentionInputRef}
-              availableContexts={availableContexts}
-              onSubmit={handleSubmit}
-              disabled={!metadata || loading}
-              placeholder={
-                metadata
-                  ? 'Ask about your spreadsheet...'
-                  : 'Open a Google Sheet to start'
-              }
-            />
-          </div>
-          <Select value={selectedModel} onValueChange={handleModelChange}>
-            <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-lg border-border px-2 text-[11px] font-medium text-muted-foreground">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper" className="min-w-[180px]">
-              <SelectGroup>
-                <SelectLabel>Anthropic</SelectLabel>
-                {MODEL_OPTIONS.filter((m) => m.provider === 'anthropic').map(
-                  (m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.label}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectGroup>
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel>OpenAI</SelectLabel>
-                {MODEL_OPTIONS.filter((m) => m.provider === 'openai').map(
-                  (m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.label}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Button
-            onClick={() => mentionInputRef.current?.submit()}
-            disabled={!metadata || loading}
-            size="icon-sm"
-            className="shrink-0 rounded-lg"
-          >
-            {loading ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : (
-              <Send className="size-4" />
-            )}
-          </Button>
-        </div>
-      </div>
+      <ChatInput
+        mentionInputRef={mentionInputRef}
+        availableContexts={availableContexts}
+        onSubmit={handleSubmit}
+        disabled={!metadata || loading}
+        loading={loading}
+        placeholder={
+          metadata
+            ? 'Ask about your spreadsheet...'
+            : 'Open a Google Sheet to start'
+        }
+        selectedModel={selectedModel}
+        onModelChange={handleModelChange}
+      />
     </div>
   )
 }
