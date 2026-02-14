@@ -22,7 +22,11 @@ export interface ApiKeyFieldProps {
   storageKey: string
 }
 
-export function ApiKeyField({ label, description, storageKey }: ApiKeyFieldProps) {
+export function ApiKeyField({
+  label,
+  description,
+  storageKey,
+}: ApiKeyFieldProps) {
   const [status, setStatus] = useState<KeyStatus>('loading')
   const [revealed, setRevealed] = useState(false)
   const [editing, setEditing] = useState(false)

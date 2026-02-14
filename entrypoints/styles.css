@@ -1,6 +1,33 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-italic-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'TikTok Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('/fonts/tiktok-sans-latin.woff2') format('woff2');
+}
+
 @theme {
+  --font-sans: 'TikTok Sans', sans-serif;
+  --font-serif: 'Instrument Serif', serif;
   --color-coral: #e3655b;
   --color-taupe: #453f3c;
   --color-blue: #658e9c;
@@ -124,6 +151,9 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
   }
 }
