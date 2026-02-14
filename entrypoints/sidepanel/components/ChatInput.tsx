@@ -41,54 +41,56 @@ export function ChatInput({
 }: ChatInputProps) {
   return (
     <div className="shrink-0 border-t border-border px-4 py-3">
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <MentionInput
-            ref={mentionInputRef}
-            availableContexts={availableContexts}
-            onSubmit={onSubmit}
-            disabled={disabled}
-            placeholder={placeholder}
-          />
-        </div>
-        <Select value={selectedModel} onValueChange={onModelChange}>
-          <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-lg border-border px-2 text-[11px] font-medium text-muted-foreground">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper" className="min-w-45">
-            <SelectGroup>
-              <SelectLabel>Anthropic</SelectLabel>
-              {MODEL_OPTIONS.filter((m) => m.provider === 'anthropic').map(
-                (m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.label}
-                  </SelectItem>
-                ),
-              )}
-            </SelectGroup>
-            <SelectSeparator />
-            <SelectGroup>
-              <SelectLabel>OpenAI</SelectLabel>
-              {MODEL_OPTIONS.filter((m) => m.provider === 'openai').map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Button
-          onClick={() => mentionInputRef.current?.submit()}
+      <div className="border-input focus-within:border-ring focus-within:ring-ring/50 rounded-md border shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]">
+        <MentionInput
+          ref={mentionInputRef}
+          availableContexts={availableContexts}
+          onSubmit={onSubmit}
           disabled={disabled}
-          size="icon-sm"
-          className="shrink-0 rounded-lg"
-        >
-          {loading ? (
-            <LoaderCircle className="size-4 animate-spin" />
-          ) : (
-            <Send className="size-4" />
-          )}
-        </Button>
+          placeholder={placeholder}
+        />
+        <div className="flex items-center justify-between px-3 pb-2">
+          <Select value={selectedModel} onValueChange={onModelChange}>
+            <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-lg border-border px-2 text-[11px] font-medium text-muted-foreground">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="min-w-45">
+              <SelectGroup>
+                <SelectLabel>Anthropic</SelectLabel>
+                {MODEL_OPTIONS.filter((m) => m.provider === 'anthropic').map(
+                  (m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectGroup>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel>OpenAI</SelectLabel>
+                {MODEL_OPTIONS.filter((m) => m.provider === 'openai').map(
+                  (m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => mentionInputRef.current?.submit()}
+            disabled={disabled}
+            size="icon-sm"
+            className="shrink-0 rounded-lg"
+          >
+            {loading ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )

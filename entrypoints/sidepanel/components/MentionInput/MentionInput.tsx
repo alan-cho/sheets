@@ -100,7 +100,7 @@ export function MentionInput({
   availableContexts,
   onSubmit,
   disabled = false,
-  placeholder = 'Type @SheetName, @TableName, or @NamedRange...',
+  placeholder,
   ref,
 }: MentionInputProps) {
   const initialConfig = {
@@ -120,13 +120,13 @@ export function MentionInput({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div
-        className="border-input focus-within:border-ring focus-within:ring-ring/50 relative flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] focus-within:ring-[3px] data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50"
+        className="relative flex w-full bg-transparent px-3 py-2 text-sm data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50"
         data-mention-input
         data-disabled={disabled}
       >
         <PlainTextPlugin
           contentEditable={
-            <ContentEditable className="min-h-5 w-full outline-none [&_.mention-input-paragraph]:m-0" />
+            <ContentEditable className="min-h-14 w-full outline-none [&_.mention-input-paragraph]:m-0" />
           }
           placeholder={
             <div className="text-muted-foreground pointer-events-none absolute left-3 top-2 text-sm">

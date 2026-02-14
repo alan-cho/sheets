@@ -1,9 +1,4 @@
-import {
-  Bug,
-  LoaderCircle,
-  RefreshCw,
-  TableProperties,
-} from 'lucide-react'
+import { Bug, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -30,11 +25,8 @@ export function StatusHeader({
     <header className="shrink-0 border-b border-border px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-coral/10">
-            <TableProperties className="size-4 text-coral" />
-          </div>
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold leading-tight">
+            <h1 className="truncate text-lg font-semibold leading-tight">
               {title ?? 'Sheets'}
             </h1>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
