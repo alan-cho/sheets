@@ -25,7 +25,7 @@ export function DebugToggleSection() {
 
   return (
     <div className="rounded-xl border border-border bg-card">
-      <div className="flex items-start justify-between gap-4 p-4">
+      <div className="flex items-start justify-between gap-4 bg-lavender/20 p-4">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">Debug Mode</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">

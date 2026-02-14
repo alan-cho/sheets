@@ -88,7 +88,7 @@ export function ApiKeyField({
 
   return (
     <div className="rounded-xl border border-border bg-card">
-      <div className="flex items-start justify-between gap-4 p-4">
+      <div className="flex items-start justify-between gap-4 bg-lavender/20 p-4">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">{label}</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
@@ -174,7 +174,7 @@ export function ApiKeyField({
             </Button>
           </div>
         ) : (
-          <Button size="sm" variant="outline" onClick={startEditing}>
+          <Button size="sm" className="bg-coral text-white hover:bg-coral/90" onClick={startEditing}>
             <KeyRound className="size-3.5" />
             Add API key
           </Button>
