@@ -81,7 +81,7 @@ export function ChatInput({
           <Button
             onClick={() => mentionInputRef.current?.submit()}
             disabled={disabled}
-            size="icon-sm"
+            size="sm"
             className="shrink-0 rounded-lg"
           >
             {loading ? (

@@ -17,16 +17,15 @@
 }
 
 @font-face {
-  font-family: 'TikTok Sans';
+  font-family: 'Funnel Sans';
   font-style: normal;
-  font-weight: 400 700;
-  font-stretch: 100%;
+  font-weight: 300 800;
   font-display: swap;
-  src: url('/fonts/tiktok-sans-latin.woff2') format('woff2');
+  src: url('/fonts/funnel-sans-latin.woff2') format('woff2');
 }
 
 @theme {
-  --font-sans: 'TikTok Sans', sans-serif;
+  --font-sans: 'Funnel Sans', sans-serif;
   --font-serif: 'Instrument Serif', serif;
   --color-coral: #e3655b;
   --color-taupe: #453f3c;

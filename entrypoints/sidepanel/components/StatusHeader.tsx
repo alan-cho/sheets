@@ -26,36 +26,38 @@ export function StatusHeader({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold leading-tight">
+            <h1 className="truncate text-lg font-semibold">
               {title ?? 'Sheets'}
             </h1>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {isLoadingMetadata ? (
-                <>
-                  <LoaderCircle className="size-3 animate-spin" />
-                  Loading...
-                </>
-              ) : isConnected ? (
-                <>
-                  <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                  Connected
-                </>
-              ) : (
-                <>
-                  <span className="inline-block size-1.5 rounded-full bg-muted-foreground/50" />
-                  Not connected
-                </>
+            <div className="flex items-center gap-2.5 font-sans">
+              <p className="flex items-center gap-1.5 text-xs">
+                {isLoadingMetadata ? (
+                  <>
+                    <LoaderCircle className="size-3 animate-spin" />
+                    Loading...
+                  </>
+                ) : isConnected ? (
+                  <>
+                    <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                    Connected
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-block size-1.5 rounded-full bg-muted-foreground/50" />
+                    Not connected
+                  </>
+                )}
+              </p>
+              {debug && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-1 py-0.5 text-xs font-medium text-amber-600">
+                  <Bug className="size-3" />
+                  Debug
+                </span>
               )}
-            </p>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          {debug && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
-              <Bug className="size-3" />
-              Debug
-            </span>
-          )}
           <Button
             variant="ghost"
             size="icon-xs"
