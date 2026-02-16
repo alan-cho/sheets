@@ -1,8 +1,11 @@
+import { LoaderCircle } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 
 interface ResponseAreaProps {
   error: string | null
   response: string | null
+  loading: boolean
   isConnected: boolean
   isLoadingMetadata: boolean
   onReconnect: () => void
@@ -11,6 +14,7 @@ interface ResponseAreaProps {
 export function ResponseArea({
   error,
   response,
+  loading,
   isConnected,
   isLoadingMetadata,
   onReconnect,
@@ -21,18 +25,35 @@ export function ResponseArea({
         <pre className="whitespace-pre-wrap text-sm">{response}</pre>
       )}
 
-      {!response && !isConnected && !isLoadingMetadata && (
-        <div className="flex h-full flex-col items-center justify-center text-center font-serif">
-          <p className="text-muted-foreground text-xl">
-            Navigate to a Google Sheet
-          </p>
-          <Button size="sm" className="mt-2 font-sans" onClick={onReconnect}>
-            Reconnect
-          </Button>
+      {!response && loading && (
+        <div className="flex h-full flex-col items-center justify-center text-center">
+          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">Thinking...</p>
         </div>
       )}
 
-      {!response && !error && isConnected && (
+      {!response && !loading && error && (
+        <div className="flex h-full flex-col items-center justify-center text-center">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      {!response &&
+        !loading &&
+        !error &&
+        !isConnected &&
+        !isLoadingMetadata && (
+          <div className="flex h-full flex-col items-center justify-center text-center font-serif">
+            <p className="text-muted-foreground text-xl">
+              Navigate to a Google Sheet
+            </p>
+            <Button size="sm" className="mt-2 font-sans" onClick={onReconnect}>
+              Reconnect
+            </Button>
+          </div>
+        )}
+
+      {!response && !loading && !error && isConnected && (
         <div className="flex h-full flex-col items-center justify-center text-center font-serif">
           <p className="text-xl text-muted-foreground">
             Ask a question about your spreadsheet

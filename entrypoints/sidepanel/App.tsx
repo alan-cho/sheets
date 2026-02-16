@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { storage } from '@wxt-dev/storage'
 
 import { ChatInput } from '@/entrypoints/sidepanel/components/ChatInput'
 import { ContextChips } from '@/entrypoints/sidepanel/components/ContextChips'
@@ -38,6 +39,13 @@ export default function App() {
     getItem('DEBUG_MODE')
       .then((saved) => setDebug(saved === 'true'))
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const unwatch = storage.watch<string>('local:DEBUG_MODE', (newValue) => {
+      setDebug(newValue === 'true')
+    })
+    return () => unwatch()
   }, [])
 
   const reconnect = useCallback(() => {
@@ -177,6 +185,7 @@ export default function App() {
       <ResponseArea
         error={error}
         response={response}
+        loading={loading}
         isConnected={isConnected}
         isLoadingMetadata={isLoadingMetadata}
         onReconnect={reconnect}

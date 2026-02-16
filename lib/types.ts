@@ -85,3 +85,5 @@ export interface SheetsApiResponse {
   }[]
   namedRanges?: { name: string; range: GridRange }[]
 }
+
+export type View = 'main' | 'settings'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer } from 'react'
 import {
   Check,
   Eye,
@@ -14,35 +14,94 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getItem, saveItem } from '@/lib/utils'
 
-type KeyStatus = 'loading' | 'empty' | 'saved'
+type State = {
+  status: 'loading' | 'empty' | 'saved'
+  savedKey: string
+  draft: string
+  revealed: boolean
+  editing: boolean
+  saving: boolean
+}
 
-export interface ApiKeyFieldProps {
+type Action =
+  | { type: 'LOADED'; key: string }
+  | { type: 'LOAD_FAILED' }
+  | { type: 'DRAFT_CHANGED'; value: string }
+  | { type: 'EDIT_STARTED' }
+  | { type: 'EDIT_ENDED' }
+  | { type: 'SAVE_STARTED' }
+  | { type: 'SAVE_SUCCEEDED'; key: string }
+  | { type: 'SAVE_FINISHED' }
+  | { type: 'DELETE_SUCCEEDED' }
+  | { type: 'TOGGLE_REVEALED' }
+
+const initialState: State = {
+  status: 'loading',
+  savedKey: '',
+  draft: '',
+  revealed: false,
+  editing: false,
+  saving: false,
+}
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'LOADED':
+      return { ...state, status: 'saved', savedKey: action.key }
+    case 'LOAD_FAILED':
+      return { ...state, status: 'empty' }
+    case 'DRAFT_CHANGED':
+      return { ...state, draft: action.value }
+    case 'EDIT_STARTED':
+      return { ...state, editing: true, draft: '', revealed: false }
+    case 'EDIT_ENDED':
+      return { ...state, editing: false, draft: '' }
+    case 'SAVE_STARTED':
+      return { ...state, saving: true }
+    case 'SAVE_SUCCEEDED':
+      return {
+        ...state,
+        savedKey: action.key,
+        status: 'saved',
+        saving: false,
+        editing: false,
+        draft: '',
+      }
+    case 'SAVE_FINISHED':
+      return { ...state, saving: false }
+    case 'DELETE_SUCCEEDED':
+      return {
+        ...state,
+        savedKey: '',
+        status: 'empty',
+        editing: false,
+        draft: '',
+        revealed: false,
+        saving: false,
+      }
+    case 'TOGGLE_REVEALED':
+      return { ...state, revealed: !state.revealed }
+  }
+}
+
+export interface APIKeyFieldProps {
   label: string
   description: string
   storageKey: string
 }
 
-export function ApiKeyField({
+export function APIKeyField({
   label,
   description,
   storageKey,
-}: ApiKeyFieldProps) {
-  const [status, setStatus] = useState<KeyStatus>('loading')
-  const [revealed, setRevealed] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [savedKey, setSavedKey] = useState('')
-  const [draft, setDraft] = useState('')
-  const [saving, setSaving] = useState(false)
+}: APIKeyFieldProps) {
+  const [state, dispatch] = useReducer(reducer, initialState)
+  const { status, savedKey, draft, revealed, editing, saving } = state
 
   useEffect(() => {
     getItem(storageKey)
-      .then((key) => {
-        setSavedKey(key)
-        setStatus('saved')
-      })
-      .catch(() => {
-        setStatus('empty')
-      })
+      .then((key) => dispatch({ type: 'LOADED', key }))
+      .catch(() => dispatch({ type: 'LOAD_FAILED' }))
   }, [storageKey])
 
   const maskedKey = savedKey
@@ -51,39 +110,23 @@ export function ApiKeyField({
 
   const handleSave = async () => {
     if (!draft.trim()) return
-    setSaving(true)
+    dispatch({ type: 'SAVE_STARTED' })
     const success = await saveItem(storageKey, draft.trim())
     if (success) {
-      setSavedKey(draft.trim())
-      setStatus('saved')
-      setEditing(false)
-      setDraft('')
+      dispatch({ type: 'SAVE_SUCCEEDED', key: draft.trim() })
+    } else {
+      dispatch({ type: 'SAVE_FINISHED' })
     }
-    setSaving(false)
   }
 
   const handleDelete = async () => {
-    setSaving(true)
+    dispatch({ type: 'SAVE_STARTED' })
     const success = await saveItem(storageKey, '')
     if (success) {
-      setSavedKey('')
-      setStatus('empty')
-      setEditing(false)
-      setDraft('')
-      setRevealed(false)
+      dispatch({ type: 'DELETE_SUCCEEDED' })
+    } else {
+      dispatch({ type: 'SAVE_FINISHED' })
     }
-    setSaving(false)
-  }
-
-  const startEditing = () => {
-    setDraft('')
-    setEditing(true)
-    setRevealed(false)
-  }
-
-  const cancelEditing = () => {
-    setEditing(false)
-    setDraft('')
   }
 
   return (
@@ -113,10 +156,12 @@ export function ApiKeyField({
               type="text"
               placeholder={`Enter your ${label.toLowerCase()}`}
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) =>
+                dispatch({ type: 'DRAFT_CHANGED', value: e.target.value })
+              }
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSave()
-                if (e.key === 'Escape') cancelEditing()
+                if (e.key === 'Escape') dispatch({ type: 'EDIT_ENDED' })
               }}
               autoFocus
             />
@@ -133,7 +178,11 @@ export function ApiKeyField({
                 )}
                 Save
               </Button>
-              <Button size="sm" variant="ghost" onClick={cancelEditing}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => dispatch({ type: 'EDIT_ENDED' })}
+              >
                 <X className="size-3.5" />
                 Cancel
               </Button>
@@ -147,7 +196,7 @@ export function ApiKeyField({
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={() => setRevealed(!revealed)}
+              onClick={() => dispatch({ type: 'TOGGLE_REVEALED' })}
               title={revealed ? 'Hide key' : 'Reveal key'}
             >
               {revealed ? (
@@ -159,7 +208,7 @@ export function ApiKeyField({
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={startEditing}
+              onClick={() => dispatch({ type: 'EDIT_STARTED' })}
               title="Update key"
             >
               <Pencil className="size-3.5 text-muted-foreground" />
@@ -174,7 +223,11 @@ export function ApiKeyField({
             </Button>
           </div>
         ) : (
-          <Button size="sm" className="bg-coral text-white hover:bg-coral/90" onClick={startEditing}>
+          <Button
+            size="sm"
+            className="bg-coral text-white hover:bg-coral/90"
+            onClick={() => dispatch({ type: 'EDIT_STARTED' })}
+          >
             <KeyRound className="size-3.5" />
             Add API key
           </Button>
